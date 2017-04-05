@@ -369,7 +369,7 @@ class Benchmark {
   void PrintEnvironment() {
     fprintf(stderr, "LevelDB:    version %d.%d\n",
             kMajorVersion, kMinorVersion);
-
+    fprintf(stderr,"Log is open %s?\n",Options().log_open?"true":"false");
 #if defined(__linux)
     time_t now = time(NULL);
     fprintf(stderr, "Date:       %s", ctime(&now));  // ctime() adds newline
