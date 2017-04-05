@@ -59,6 +59,7 @@ static const char* FLAGS_benchmarks =
     "snappycomp,"
     "snappyuncomp,"
     "acquireload,"
+    "printEnvironment,"
     ;
 
 // Number of key/values to place in database
@@ -522,6 +523,8 @@ class Benchmark {
         PrintStats("leveldb.stats");
       } else if (name == Slice("sstables")) {
         PrintStats("leveldb.sstables");
+      } else if(name == Slice("printEnvironment")){
+	PrintEnvironment();  
       } else {
         if (name != Slice()) {  // No error message for empty name
           fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
