@@ -1406,6 +1406,7 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
     }
   } else if (in == "stats") {
     char buf[200];
+    int64_t bytes_written = 0;
     snprintf(buf, sizeof(buf),
              "                               Compactions\n"
              "Level  Files Size(MB) Time(sec) Read(MB) Write(MB)\n"
@@ -1425,8 +1426,11 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
             stats_[level].bytes_read / 1048576.0,
             stats_[level].bytes_written / 1048576.0);
         value->append(buf);
+	bytes_written += stats_[level].bytes_written;
       }
     }
+    snprintf(buf,sizeof(buf),"total Megabyte(MB) written :%9.0lf\n",bytes_written/1048576.0);
+    value->append(buf);
     return true;
   } else if (in == "sstables") {
     *value = versions_->current()->DebugString();
