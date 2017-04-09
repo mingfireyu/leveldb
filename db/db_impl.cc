@@ -20,6 +20,7 @@
 #include "db/table_cache.h"
 #include "db/version_set.h"
 #include "db/write_batch_internal.h"
+#include "statisticsmod.h"
 #include "leveldb/db.h"
 #include "leveldb/env.h"
 #include "leveldb/status.h"
@@ -172,6 +173,7 @@ DBImpl::~DBImpl() {
   if (owns_cache_) {
     delete options_.block_cache;
   }
+  StatisticsMod::DestroyInstance();
 }
 
 Status DBImpl::NewDB() {
@@ -1211,6 +1213,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   uint64_t last_sequence = versions_->LastSequence();
   Writer* last_writer = &w;
   bool sync_error = false;
+  struct timeval start_time;
   if (status.ok() && my_batch != NULL) {  // NULL batch is for compactions
     WriteBatch* updates = BuildBatchGroup(&last_writer);
     WriteBatchInternal::SetSequence(updates, last_sequence + 1);
@@ -1223,6 +1226,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
     {
       mutex_.Unlock();
       if(log_open_){
+	gettimeofday(&start_time,NULL);
 	status = log_->AddRecord(WriteBatchInternal::Contents(updates));
 	if (status.ok() && options.sync) {
 	    status = logfile_->Sync();
@@ -1230,10 +1234,13 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
 		sync_error = true;
 	    }
 	}
+	StatisticsMod::getInstance()->timeProcess(start_time,Statistics::WRITETOLOG);
       }
+     gettimeofday(&start_time,NULL);
      if (status.ok()) {
         status = WriteBatchInternal::InsertInto(updates, mem_);
       }
+      StatisticsMod::getInstance()->timeProcess(start_time,Statistics::WRITETOMEMTABLE);
       mutex_.Lock();
       if (sync_error) {
         // The state of the log file is indeterminate: the log record we
@@ -1322,6 +1329,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
   assert(!writers_.empty());
   bool allow_delay = !force;
   Status s;
+  struct timeval start_time;
   while (true) {
     if (!bg_error_.ok()) {
       // Yield previous error
@@ -1336,10 +1344,12 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       // individual write by 1ms to reduce latency variance.  Also,
       // this delay hands over some CPU to the compaction thread in
       // case it is sharing the same core as the writer.
+      gettimeofday(&start_time,NULL);
       mutex_.Unlock();
       env_->SleepForMicroseconds(1000);
       allow_delay = false;  // Do not delay a single write more than once
       mutex_.Lock();
+      StatisticsMod::getInstance()->timeProcess(start_time,Statistics::WAIT);
     } else if (!force &&
                (mem_->ApproximateMemoryUsage() <= options_.write_buffer_size)) {
       // There is room in current memtable
@@ -1348,11 +1358,15 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       // We have filled up the current memtable, but the previous
       // one is still being compacted, so we wait.
       Log(options_.info_log, "Current memtable full; waiting...\n");
+      gettimeofday(&start_time,NULL);
       bg_cv_.Wait();
+      StatisticsMod::getInstance()->timeProcess(start_time,Statistics::WAIT);
     } else if (versions_->NumLevelFiles(0) >= config::kL0_StopWritesTrigger) {
       // There are too many level-0 files.
       Log(options_.info_log, "Too many L0 files; waiting...\n");
+      gettimeofday(&start_time,NULL);
       bg_cv_.Wait();
+      StatisticsMod::getInstance()->timeProcess(start_time,Statistics::WAIT);
     } else {
       // Attempt to switch to a new memtable and trigger compaction of old
       assert(versions_->PrevLogNumber() == 0);
@@ -1448,6 +1462,15 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
              static_cast<unsigned long long>(total_usage));
     value->append(buf);
     return true;
+  }else if(in == "write-time-break-up"){
+	unsigned long long totalTime;
+	char buf[50];
+	for(int i = 0 ; i < Statistics::STATISTICSNUMLENGTH ; i++){
+	    totalTime=StatisticsMod::getInstance()->getElapsedTime(i);
+	    snprintf(buf,sizeof(buf),"%s,%llu\n",statisticsString[i],totalTime);
+	    value->append(buf);
+	}
+	return true;
   }
 
   return false;
