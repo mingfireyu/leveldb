@@ -1225,7 +1225,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
     // into mem_.
     {
       mutex_.Unlock();
-      if(log_open_){
+      if(log_open_||options.sync){
 	gettimeofday(&start_time,NULL);
 	status = log_->AddRecord(WriteBatchInternal::Contents(updates));
 	if (status.ok() && options.sync) {
@@ -1371,7 +1371,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       // Attempt to switch to a new memtable and trigger compaction of old
       assert(versions_->PrevLogNumber() == 0);
       uint64_t new_log_number = versions_->NewFileNumber();
-      if(log_open_){
+     // if(log_open_){
 	WritableFile* lfile = NULL;
 	s = env_->NewWritableFile(LogFileName(dbname_, new_log_number), &lfile);
 	if (!s.ok()) {
@@ -1384,7 +1384,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
 	logfile_ = lfile;
 	logfile_number_ = new_log_number;
 	log_ = new log::Writer(lfile);
-      }
+      //}
       imm_ = mem_;
       has_imm_.Release_Store(imm_);
       mem_ = new MemTable(internal_comparator_);
