@@ -8,16 +8,19 @@
 namespace leveldb {
 
 static const int kBlockSize = 4096;
-
+static const int kResBlockNum = 8192;
 Arena::Arena() : memory_usage_(0) {
   alloc_ptr_ = NULL;  // First allocation will allocate a block
   alloc_bytes_remaining_ = 0;
+  res_block_off_ = 0;
+  res_block_ptr_ = new char  [kResBlockNum*kBlockSize];
 }
 
 Arena::~Arena() {
   for (size_t i = 0; i < blocks_.size(); i++) {
     delete[] blocks_[i];
   }
+  delete[] res_block_ptr_;
 }
 
 char* Arena::AllocateFallback(size_t bytes) {
@@ -58,11 +61,17 @@ char* Arena::AllocateAligned(size_t bytes) {
 }
 
 char* Arena::AllocateNewBlock(size_t block_bytes) {
-  char* result = new char[block_bytes];
-  blocks_.push_back(result);
-  memory_usage_.NoBarrier_Store(
-      reinterpret_cast<void*>(MemoryUsage() + block_bytes + sizeof(char*)));
-  return result;
+    char* result;
+   if(res_block_off_ + block_bytes < kResBlockNum*kBlockSize){
+	result  = res_block_ptr_ + res_block_off_;
+	res_block_off_ += block_bytes;
+    }else{
+	result = new char[block_bytes];
+	 blocks_.push_back(result);
+    }
+    memory_usage_.NoBarrier_Store(
+    reinterpret_cast<void*>(MemoryUsage() + block_bytes + sizeof(char*)));
+    return result;
 }
 
 }  // namespace leveldb

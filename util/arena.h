@@ -37,7 +37,8 @@ class Arena {
   // Allocation state
   char* alloc_ptr_;
   size_t alloc_bytes_remaining_;
-
+  char * res_block_ptr_;
+  int res_block_off_;
   // Array of new[] allocated memory blocks
   std::vector<char*> blocks_;
 
