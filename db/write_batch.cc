@@ -20,7 +20,7 @@
 #include "db/memtable.h"
 #include "db/write_batch_internal.h"
 #include "util/coding.h"
-
+#include "statisticsmod.h"
 namespace leveldb {
 
 // WriteBatch header has an 8-byte sequence number followed by a 4-byte count.
@@ -113,9 +113,12 @@ class MemTableInserter : public WriteBatch::Handler {
  public:
   SequenceNumber sequence_;
   MemTable* mem_;
-
+  
   virtual void Put(const Slice& key, const Slice& value) {
+    struct timeval start_time;
+    gettimeofday(&start_time,NULL);
     mem_->Add(sequence_, kTypeValue, key, value);
+    StatisticsMod::getInstance()->timeProcess(start_time,Statistics::MEMTABLEADD);
     sequence_++;
   }
   virtual void Delete(const Slice& key) {
