@@ -338,11 +338,13 @@ void SkipList<Key,Comparator>::Insert(const Key& key) {
   // TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
   // here since Insert() is externally synchronized.
   Node* prev[kMaxHeight];
-  Node* x = FindGreaterOrEqual(key, prev);
   struct timeval start_time;
+  gettimeofday(&start_time,NULL);
+  Node* x = FindGreaterOrEqual(key, prev);
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::FINDEQUAL);
   // Our data structure does not allow duplicate insertion
   assert(x == NULL || !Equal(key, x->key));
-
+  gettimeofday(&start_time,NULL);
   int height = RandomHeight();
   if (height > GetMaxHeight()) {
     for (int i = GetMaxHeight(); i < height; i++) {
@@ -359,15 +361,18 @@ void SkipList<Key,Comparator>::Insert(const Key& key) {
     // keys.  In the latter case the reader will use the new node.
     max_height_.NoBarrier_Store(reinterpret_cast<void*>(height));
   }
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::MAXHEIGHT);
   gettimeofday(&start_time,NULL);
   x = NewNode(key, height);
   StatisticsMod::getInstance()->timeProcess(start_time,Statistics::NEWNODE);
+  gettimeofday(&start_time,NULL);
   for (int i = 0; i < height; i++) {
     // NoBarrier_SetNext() suffices since we will add a barrier when
     // we publish a pointer to "x" in prev[i].
     x->NoBarrier_SetNext(i, prev[i]->NoBarrier_Next(i));
     prev[i]->SetNext(i, x);
   }
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::SETNEXT);
 }
 
 template<typename Key, class Comparator>
