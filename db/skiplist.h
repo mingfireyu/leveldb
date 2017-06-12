@@ -32,7 +32,7 @@
 #include "port/port.h"
 #include "util/arena.h"
 #include "util/random.h"
-
+#include"statisticsmod.h"
 namespace leveldb {
 
 class Arena;
@@ -339,7 +339,7 @@ void SkipList<Key,Comparator>::Insert(const Key& key) {
   // here since Insert() is externally synchronized.
   Node* prev[kMaxHeight];
   Node* x = FindGreaterOrEqual(key, prev);
-
+  struct timeval start_time;
   // Our data structure does not allow duplicate insertion
   assert(x == NULL || !Equal(key, x->key));
 
@@ -359,8 +359,9 @@ void SkipList<Key,Comparator>::Insert(const Key& key) {
     // keys.  In the latter case the reader will use the new node.
     max_height_.NoBarrier_Store(reinterpret_cast<void*>(height));
   }
-
+  gettimeofday(&start_time,NULL);
   x = NewNode(key, height);
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::NEWNODE);
   for (int i = 0; i < height; i++) {
     // NoBarrier_SetNext() suffices since we will add a barrier when
     // we publish a pointer to "x" in prev[i].
