@@ -8,7 +8,7 @@
 #include "leveldb/env.h"
 #include "leveldb/iterator.h"
 #include "util/coding.h"
-
+#include "statisticsmod.h"
 namespace leveldb {
 
 static Slice GetLengthPrefixedSlice(const char* data) {
@@ -90,19 +90,28 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   size_t key_size = key.size();
   size_t val_size = value.size();
   size_t internal_key_size = key_size + 8;
+  struct timeval start_time;
   const size_t encoded_len =
       VarintLength(internal_key_size) + internal_key_size +
       VarintLength(val_size) + val_size;
+  gettimeofday(&start_time,NULL);
   char* buf = arena_.Allocate(encoded_len);
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::WRITETOMEMTABLE);
   char* p = EncodeVarint32(buf, internal_key_size);
+  gettimeofday(&start_time,NULL);
   memcpy(p, key.data(), key_size);
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::MEMCPY);
   p += key_size;
   EncodeFixed64(p, (s << 8) | type);
   p += 8;
   p = EncodeVarint32(p, val_size);
+  gettimeofday(&start_time,NULL);
   memcpy(p, value.data(), val_size);
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::MEMCPY);
   assert((p + val_size) - buf == encoded_len);
+  gettimeofday(&start_time,NULL);
   table_.Insert(buf);
+  StatisticsMod::getInstance()->timeProcess(start_time,Statistics::TABLEINSERT);
 }
 
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {

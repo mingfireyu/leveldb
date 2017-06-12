@@ -6,9 +6,9 @@
 #include <sys/time.h>
 #include<climits>
 namespace leveldb{
-    const char statisticsString[][50]={"WAIT","WRITETOLOG","WRITETOMEMTABLE"};
+    const char statisticsString[][50]={"WAIT","WRITETOLOG","WRITETOMEMTABLE","ARENAALLOCATE","MEMCPY","TABLEINSERT"};
     enum Statistics{
-      WAIT,WRITETOLOG,WRITETOMEMTABLE,STATISTICSNUMLENGTH
+      WAIT,WRITETOLOG,WRITETOMEMTABLE,ARENAALLOCATE,MEMCPY,TABLEINSERT,STATISTICSNUMLENGTH
     };
     class StatisticsMod {
  
