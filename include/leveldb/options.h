@@ -27,6 +27,10 @@ enum CompressionType {
   kSnappyCompression = 0x1
 };
 
+typedef struct OptionExp{
+    bool seek_compaction_;
+    OptionExp();
+}OptionExp;
 // Options to control the behavior of a database (passed to DB::Open)
 struct Options {
   // -------------------
@@ -152,7 +156,8 @@ struct Options {
   //
   // Default: NULL
   const FilterPolicy* filter_policy;
-
+  
+  struct OptionExp opEp_;
   // Create an Options object with default values for all fields.
   Options();
 };

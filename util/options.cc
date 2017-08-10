@@ -8,6 +8,9 @@
 #include "leveldb/env.h"
 
 namespace leveldb {
+OptionExp::OptionExp():seek_compaction_(false)
+{  
+}
 
 Options::Options()
     : comparator(BytewiseComparator()),
