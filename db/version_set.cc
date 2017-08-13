@@ -597,6 +597,20 @@ std::string Version::DebugString() const {
   return r;
 }
 
+void Version::findAllTables(TableCache* table_cache)
+{
+    for (int level = 0; level < config::kNumLevels; level++){
+ 	   size_t num_files = files_[level].size();
+  	   if(num_files == 0){
+ 		continue;
+ 	    }
+  	    for(int i = 0 ; i < num_files ; i++){
+ 		auto iter = table_cache->NewIterator(ReadOptions(), files_[level][i]->number, files_[level][i]->file_size);
+ 		delete iter;
+ 	    }
+       }          
+}
+
 // A helper class so we can efficiently apply a whole sequence
 // of edits to a particular state without creating intermediate
 // Versions that contain full copies of the intermediate state.
@@ -1319,6 +1333,7 @@ Compaction* VersionSet::PickCompaction() {
     level = current_->file_to_compact_level_;
     c = new Compaction(options_, level);
     c->inputs_[0].push_back(current_->file_to_compact_);
+    c->compactionType_ = true;
   } else {
     return NULL;
   }
@@ -1445,13 +1460,21 @@ Compaction* VersionSet::CompactRange(
   return c;
 }
 
+void VersionSet::findAllTables()
+{
+    current_->Ref();
+    current_->findAllTables(table_cache_);
+    current_->Unref();
+}
+
+
 Compaction::Compaction(const Options* options, int level)
     : level_(level),
       max_output_file_size_(MaxFileSizeForLevel(options, level)),
       input_version_(NULL),
       grandparent_index_(0),
       seen_key_(false),
-      overlapped_bytes_(0) {
+      overlapped_bytes_(0),compactionType_(false) {
   for (int i = 0; i < config::kNumLevels; i++) {
     level_ptrs_[i] = 0;
   }

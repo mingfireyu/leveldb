@@ -112,7 +112,7 @@ class Version {
 
   // Return a human readable string that describes this version's contents.
   std::string DebugString() const;
-
+  void findAllTables(TableCache *table_cache);
  private:
   friend class Compaction;
   friend class VersionSet;
@@ -267,7 +267,7 @@ class VersionSet {
     char buffer[100];
   };
   const char* LevelSummary(LevelSummaryStorage* scratch) const;
-
+  void findAllTables();
  private:
   class Builder;
 
@@ -361,7 +361,7 @@ class Compaction {
   // Release the input version for the compaction, once the compaction
   // is successful.
   void ReleaseInputs();
-
+  bool compactionType_; //false means size_compaction,true means seek_compaction
  private:
   friend class Version;
   friend class VersionSet;
@@ -373,7 +373,7 @@ class Compaction {
   Version* input_version_;
   VersionEdit edit_;
 
-  // Each compaction reads inputs from "level_" and "level_+1"
+  // Each compaction reads inputs from "level_" and "level_+1"
   std::vector<FileMetaData*> inputs_[2];      // The two sets of inputs
 
   // State used to check for number of of overlapping grandparent files

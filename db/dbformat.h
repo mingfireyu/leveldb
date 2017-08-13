@@ -41,6 +41,7 @@ static const int kMaxMemCompactLevel = 2;
 // Approximate gap in bytes between samples of data read during iteration.
 static const int kReadBytesPeriod = 1048576;
 
+static const int compactionTypeNum = 2;
 }  // namespace config
 
 class InternalKey;

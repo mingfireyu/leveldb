@@ -181,13 +181,16 @@ class DBImpl : public DB {
     int64_t micros;
     int64_t bytes_read;
     int64_t bytes_written;
-
-    CompactionStats() : micros(0), bytes_read(0), bytes_written(0) { }
+    int64_t compaction_count[2];   //0 means size compaction, 1 means seek compaction
+    CompactionStats() : micros(0), bytes_read(0), bytes_written(0),compaction_count{0,0} { }
 
     void Add(const CompactionStats& c) {
       this->micros += c.micros;
       this->bytes_read += c.bytes_read;
       this->bytes_written += c.bytes_written;
+      for(int i = 0 ; i < config::compactionTypeNum ; i++){
+	    compaction_count[i] += c.compaction_count[i];
+      }
     }
   };
   CompactionStats stats_[config::kNumLevels];

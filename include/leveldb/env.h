@@ -28,6 +28,8 @@ class SequentialFile;
 class Slice;
 class WritableFile;
 
+extern bool direct_IO_flag_;
+void setDirectIOFlag(bool flag);
 class Env {
  public:
   Env() { }
@@ -214,7 +216,7 @@ class RandomAccessFile {
   // Safe for concurrent use by multiple threads.
   virtual Status Read(uint64_t offset, size_t n, Slice* result,
                       char* scratch) const = 0;
-
+ 
  private:
   // No copying allowed
   RandomAccessFile(const RandomAccessFile&);

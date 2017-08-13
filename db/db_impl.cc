@@ -554,6 +554,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   CompactionStats stats;
   stats.micros = env_->NowMicros() - start_micros;
   stats.bytes_written = meta.file_size;
+  stats.compaction_count[0]++;
   stats_[level].Add(stats);
   return s;
 }
@@ -1047,6 +1048,11 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
   input = NULL;
 
   CompactionStats stats;
+  if(compact->compaction->compactionType_){
+	stats.compaction_count[1]++;
+  }else{
+	stats.compaction_count[0]++;
+  }
   stats.micros = env_->NowMicros() - start_micros - imm_micros;
   for (int which = 0; which < 2; which++) {
     for (int i = 0; i < compact->compaction->num_input_files(which); i++) {
@@ -1059,7 +1065,7 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
 
   mutex_.Lock();
   stats_[compact->compaction->level() + 1].Add(stats);
-
+  
   if (status.ok()) {
     status = InstallCompactionResults(compact);
   }
@@ -1429,6 +1435,7 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
     }
   } else if (in == "stats") {
     char buf[200];
+    int64_t compactionCount[config::compactionTypeNum]={0,0};
     snprintf(buf, sizeof(buf),
              "                               Compactions\n"
              "Level  Files Size(MB) Time(sec) Read(MB) Write(MB)\n"
@@ -1448,8 +1455,17 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
             stats_[level].bytes_read / 1048576.0,
             stats_[level].bytes_written / 1048576.0);
         value->append(buf);
+	for(int j = 0 ; j < config::compactionTypeNum ; j++){
+	    compactionCount[j] += stats_[j].compaction_count[j];
+	}
       }
     }
+    snprintf(buf, sizeof(buf),"compaction count of different types\n");
+    value->append(buf);
+    for(int i = 0 ; i < config::compactionTypeNum ; i++){
+	snprintf(buf,sizeof(buf),"Type %d Count:%ld",i,compactionCount[i]);
+    }
+    value->append(buf);
     return true;
   } else if (in == "sstables") {
     *value = versions_->current()->DebugString();
@@ -1558,6 +1574,9 @@ Status DB::Open(const Options& options, const std::string& dbname,
   impl->mutex_.Unlock();
   if (s.ok()) {
     assert(impl->mem_ != NULL);
+    impl->mutex_.Lock();
+    impl->versions_->findAllTables();
+    impl->mutex_.Unlock();
     *dbptr = impl;
   } else {
     delete impl;
