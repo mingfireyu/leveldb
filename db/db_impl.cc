@@ -1463,9 +1463,9 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
     snprintf(buf, sizeof(buf),"compaction count of different types\n");
     value->append(buf);
     for(int i = 0 ; i < config::compactionTypeNum ; i++){
-	snprintf(buf,sizeof(buf),"Type %d Count:%ld",i,compactionCount[i]);
+	snprintf(buf,sizeof(buf),"Type %d Count:%ld\n",i,compactionCount[i]);
+	value->append(buf);
     }
-    value->append(buf);
     return true;
   } else if (in == "sstables") {
     *value = versions_->current()->DebugString();
