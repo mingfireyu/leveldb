@@ -19,10 +19,11 @@ struct FileMetaData {
   int allowed_seeks;          // Seeks allowed until compaction
   uint64_t number;
   uint64_t file_size;         // File size in bytes
+  int access_time;		// File access time in Get request
   InternalKey smallest;       // Smallest internal key served by table
   InternalKey largest;        // Largest internal key served by table
-
-  FileMetaData() : refs(0), allowed_seeks(1 << 30), file_size(0) { }
+  short level;
+  FileMetaData() : refs(0), allowed_seeks(1 << 30), file_size(0),level(-1),access_time(0) { }
 };
 
 class VersionEdit {
