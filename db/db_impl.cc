@@ -32,7 +32,7 @@
 #include "util/coding.h"
 #include "util/logging.h"
 #include "util/mutexlock.h"
-
+unsigned long long readTableCount;
 namespace leveldb {
 
 const int kNumNonTableCacheFiles = 10;
@@ -136,7 +136,7 @@ DBImpl::DBImpl(const Options& raw_options, const std::string& dbname)
       bg_compaction_scheduled_(false),
       manual_compaction_(NULL) {
   has_imm_.Release_Store(NULL);
-
+  readTableCount = 0;
   // Reserve ten files or so for other uses and give the rest to TableCache.
   const int table_cache_size = options_.max_open_files - kNumNonTableCacheFiles;
   table_cache_ = new TableCache(dbname_, &options_, table_cache_size);
@@ -905,7 +905,7 @@ Status DBImpl::InstallCompactionResults(CompactionState* compact) {
   const int level = compact->compaction->level();
   for (size_t i = 0; i < compact->outputs.size(); i++) {
     const CompactionState::Output& out = compact->outputs[i];
-    compact->compaction->edit()->AddFile(
+    compact->compaction->edit()->AddFile(                      //use FileMetaData default constructor 
         level + 1,
         out.number, out.file_size, out.smallest, out.largest);
   }
@@ -1466,6 +1466,8 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
 	snprintf(buf,sizeof(buf),"Type %d Count:%ld\n",i,compactionCount[i]);
 	value->append(buf);
     }
+     snprintf(buf,sizeof(buf),"\n readTableCount:%llu \n",readTableCount);
+     value->append(buf);
     return true;
   } else if (in == "sstables") {
     *value = versions_->current()->DebugString();
@@ -1490,6 +1492,18 @@ bool DBImpl::GetProperty(const Slice& property, std::string* value) {
  	    value->append(buf);
        }
        return true;
+  }else if(in.starts_with("files-access-frequencies")){
+	in.remove_prefix(strlen("files-access-frequencies"));
+	uint64_t level;
+	bool ok = ConsumeDecimalNumber(&in, &level) && in.empty();
+	if (!ok || level >= config::kNumLevels) {
+	    return false;
+	} else {
+	    mutex_.Lock();
+	    versions_->printTables(level,value);
+	    mutex_.Unlock();
+	    return true;
+	}
   }
 
   return false;

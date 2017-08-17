@@ -390,7 +390,7 @@ Status Version::Get(const ReadOptions& options,
     }
 
     for (uint32_t i = 0; i < num_files; ++i) {
-      if (last_file_read != NULL && stats->seek_file == NULL) {
+      if (last_file_read != NULL && stats->seek_file == NULL) {         //seems only record high level files 
         // We have had more than one seek for this read.  Charge the 1st file.
         stats->seek_file = last_file_read;
         stats->seek_file_level = last_file_read_level;
@@ -407,6 +407,10 @@ Status Version::Get(const ReadOptions& options,
       saver.value = value;
       s = vset_->table_cache_->Get(options, f->number, f->file_size,
                                    ikey, &saver, SaveValue);
+      if(f->level == -1){
+	    f->level = level;
+      }
+      f->access_time++;
       if (!s.ok()) {
         return s;
       }
@@ -610,6 +614,22 @@ void Version::findAllTables(TableCache* table_cache)
  	    }
        }          
 }
+
+void Version::printTables(int level, std::string* file_strs)
+{
+    //int begin = - 1,end=-1;
+    char buf[100];
+    for(int i = 0 ; i < files_[level].size(); i++){
+	if(i == 0){
+	    snprintf(buf, sizeof(buf),"%d",files_[level][i]->access_time);
+	}else{
+	    snprintf(buf,sizeof(buf),",%d",files_[level][i]->access_time);
+	}
+	file_strs->append(buf);
+    }
+    file_strs->append("\n");
+}
+
 
 // A helper class so we can efficiently apply a whole sequence
 // of edits to a particular state without creating intermediate
@@ -1464,6 +1484,13 @@ void VersionSet::findAllTables()
 {
     current_->Ref();
     current_->findAllTables(table_cache_);
+    current_->Unref();
+}
+
+void VersionSet::printTables(int level,std::string *file_strs)
+{
+    current_->Ref();
+    current_->printTables(level,file_strs);
     current_->Unref();
 }
 
